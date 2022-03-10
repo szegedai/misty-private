@@ -6,7 +6,7 @@ from mistyPy.Events import Events
 import cv2
 import time
 
-import hci_methods
+import hci_methods_recording
 
 misty = None
 vcap = None
@@ -85,7 +85,10 @@ def start_robot_connection(misty_ip_address=None):
         frame_width = int(vcap.get(3))
         frame_height = int(vcap.get(4))
    
-        size = (frame_height, frame_width)
+        if misty is not None:
+            size = (frame_height, frame_width)
+        else:
+            size = (frame_width, frame_height)
         
         print(f"size: {size}")
         
@@ -108,10 +111,11 @@ def start_robot_connection(misty_ip_address=None):
             else:
                 if misty is not None:
                     frame = cv2.rotate(frame, cv2.cv2.ROTATE_90_CLOCKWISE)
-                    hci_methods.default_image_classification_algorithm(frame)
-                    if hci_methods.recording is True:
-                        print("Recording...")
-                        result.write(frame)
+                hci_methods_recording.default_image_classification_algorithm(frame)
+                if hci_methods_recording.recording is True:
+                    print("Recording...")
+                    result.write(frame)
+                        
             
     except Exception as e:
         print(e)
