@@ -10,6 +10,32 @@ import hci_methods
 
 misty = None
 vcap = None
+result = None
+
+from time import gmtime, strftime
+recording = False
+
+# Handles recording stills and video via keyboard input
+def image_recording(image):
+    global recording, result
+    
+    key = cv2.waitKey(1)
+    # if the spacebar is pressed
+    if key%256 == 32:
+        img_name = "img_{}.png".format(strftime("%Y%m%d%H%M%S"))
+        cv2.imwrite(img_name, image)
+        cv2.imshow("1", image)
+    
+    # if R key is pressed
+    if key%256 == 114:
+         if recording is False:
+            recording = True
+         else:
+            recording = False
+    
+    if recording is True:
+        print("Recording")
+        result.write(image)
 
 # Robot event handling
 def remove_closed_events():
@@ -36,6 +62,7 @@ def captouch_callback(data):
 def start_robot_connection(misty_ip_address=None):
     global misty
     global vcap
+    global result
     try:
         if misty_ip_address is not None:
             print("Connecting to Misty Robot")
@@ -78,7 +105,23 @@ def start_robot_connection(misty_ip_address=None):
                 print("Unkown error")
                 print(e)
                 time.sleep(1)
-                
+        
+        
+        frame_width = int(vcap.get(3))
+        frame_height = int(vcap.get(4))
+   
+        if misty is not None:
+            size = (frame_height, frame_width)
+        else:
+            size = (frame_width, frame_height)
+        
+        print(f"size: {size}")
+        
+        
+        fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+        result = cv2.VideoWriter('out.avi', 
+                         fourcc,
+                         30, size)
         # TODO: More elegant exit method
         # Reading frames, while true...
         # And also handling Misty's events
@@ -93,7 +136,9 @@ def start_robot_connection(misty_ip_address=None):
             else:
                 if misty is not None:
                     frame = cv2.rotate(frame, cv2.cv2.ROTATE_90_CLOCKWISE)
-                    hci_methods.default_image_classification_algorithm(frame)
+                hci_methods_recording.default_image_classification_algorithm(frame)
+                image_recording(frame)
+                        
             
     except Exception as e:
         print(e)
@@ -114,6 +159,8 @@ def exit_function():
     
     if vcap is not None:
         vcap.release()
+    if result is not None:
+        result.release()
     cv2.destroyAllWindows()
     print("Exiting program.")
 
@@ -125,4 +172,4 @@ if __name__ == "__main__":
         misty_ip_address = sys.argv[1]
 
     start_robot_connection(misty_ip_address)
-        
+    
