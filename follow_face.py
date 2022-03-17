@@ -5,7 +5,6 @@ import random
 import time
 from datetime import datetime, timezone
 import dateutil.parser
-import sys
 
 searching_for_face = None
 head_yaw = None
@@ -42,7 +41,6 @@ def start_face_following_skill(calibration = False):
         pitch_down = 26.35605857601787
         pitch_up = -33.231552117587746
 
-    #calibrate()
 
     misty.StopFaceRecognition()
     misty.StartFaceRecognition()
@@ -97,6 +95,9 @@ def register_yaw():
 def register_pitch():
     misty.RegisterEvent("set_head_pitch", Events.ActuatorPosition, condition = [EventFilters.ActuatorPosition.HeadPitch], callback_function = set_head_pitch_callback, debounce = 100, keep_alive = True)
 
+def register_key_phrase_rec():
+    misty.RegisterEvent("key_phrase_recognized", Events.KeyPhraseRecognized, callback_function = key_phrase_callback, keep_alive = False)
+
 def set_head_yaw_callback(data):
     global head_yaw
     head_yaw = data["message"]["value"]
@@ -107,6 +108,10 @@ def set_head_pitch_callback(data):
     head_pitch = data["message"]["value"]
     #print(f"head_pitch set to: {head_pitch}")
 
+def key_phrase_callback(data):
+    print(f"Misty heard you, trying to wake her up. Confidence: {data['message']['confidence']}%")
+
+
 def face_rec_callback(data):
     global searching_for_face, misty
     print("face found!")
@@ -116,6 +121,8 @@ def face_rec_callback(data):
         searching_for_face = False
         misty.ChangeLED(0, 255, 0);
         misty.DisplayImage("e_Love.jpg")
+        misty.StartKeyPhraseRecognition()
+        register_key_phrase_rec()
 
 
     bearing = data["message"]["bearing"]
@@ -160,9 +167,9 @@ if __name__ == "__main__":
         misty = Robot(ip_address)
         print(ip_address)
         #misty.Speak("Hello")
-        if(len(sys.argv) > 1):
-            calibration = sys.argv[1]
-        start_face_following_skill(calibrate)
+        start_face_following_skill()
+
+
 
     except Exception as ex:
         print(ex)
@@ -172,4 +179,5 @@ if __name__ == "__main__":
         misty.UnregisterAllEvents()
         misty.ChangeLED(0, 0, 255)
         misty.DisplayImage("e_DefaultContent.jpg")
+        misty.StopKeyPhraseRecognition()
         print("face rec stopped, unregstered all events")
