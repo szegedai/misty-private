@@ -39,9 +39,9 @@ def start():
     registerAudioLocalisation()
     registerIMU()
     registerActuatorPosition()
-    
+
     misty.KeepAlive()
-    
+
 def registerIMU():
     global misty
     misty.RegisterEvent("heading", Events.IMU, callback_function = heading_callback, debounce = 100, keep_alive = True)
@@ -54,7 +54,7 @@ def registerAudioLocalisation():
     global misty
     #misty.AddReturnProperty("sound", "DegreeOfArrivalSpeech")
     misty.RegisterEvent("sound", Events.SourceTrackDataMessage, callback_function = sound_callback, debounce = 100, keep_alive = True)
-    
+
 def positions_callback(data):
     global head_yaw
     if data["message"]["sensorId"] == "ahy":
@@ -62,7 +62,7 @@ def positions_callback(data):
     	head_yaw_local = -45.0 if head_yaw_local < -45.0 else head_yaw_local
     	head_yaw_local = 45.0 if head_yaw_local > 45.0 else head_yaw_local
     	head_yaw = head_yaw_local
-    	
+
 def heading_callback(data):
     global robot_yaw
     yaw = data["message"]["yaw"]
@@ -145,6 +145,6 @@ if __name__ == "__main__":
 
     except Exception as ex:
         print(ex)
-             
+
     finally:
         misty.UnregisterAllEvents()

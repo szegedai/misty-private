@@ -136,7 +136,7 @@ def start_robot_connection(misty_ip_address=None):
             else:
                 if misty is not None:
                     frame = cv2.rotate(frame, cv2.cv2.ROTATE_90_CLOCKWISE)
-                hci_methods_recording.default_image_classification_algorithm(frame)
+                hci_methods.default_image_classification_algorithm(frame)
                 image_recording(frame)
                         
             
