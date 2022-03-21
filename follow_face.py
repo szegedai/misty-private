@@ -16,7 +16,6 @@ yaw_left = None
 pitch_up = None
 pitch_down = None
 misty = None
-time_of_recording_start = datetime.now(timezone.utc)
 
 
 def start_face_following_skill(calibration = False):
@@ -127,8 +126,6 @@ def voice_rec_callback(data):
         #misty.CaptureSpeech(silenceTimeout = 10000, requireKeyPhrase = False)
         misty.StartKeyPhraseRecognition()
 
-
-
 def face_rec_callback(data):
     global searching_for_face, misty
     print("face found!")
@@ -194,6 +191,4 @@ if __name__ == "__main__":
         misty.ChangeLED(255, 255, 255)
         misty.DisplayImage("e_DefaultContent.jpg")
         misty.StopKeyPhraseRecognition()
-        misty.StopRecordingAudio()
-        misty.StopAvStreaming()
         print("face rec stopped, unregstered all events")
