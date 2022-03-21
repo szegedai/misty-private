@@ -5,6 +5,8 @@ import random
 import time
 from datetime import datetime, timezone
 import dateutil.parser
+import base64
+import cv2
 
 searching_for_face = None
 head_yaw = None
@@ -14,6 +16,7 @@ yaw_left = None
 pitch_up = None
 pitch_down = None
 misty = None
+time_of_recording_start = datetime.now(timezone.utc)
 
 
 def start_face_following_skill(calibration = False):
@@ -45,7 +48,7 @@ def start_face_following_skill(calibration = False):
     misty.StopFaceRecognition()
     misty.StartFaceRecognition()
 
-    face_rec_event_status = misty.RegisterEvent("face_rec", Events.FaceRecognition, callback_function = face_rec_callback, debounce = 1300, keep_alive = True)
+    face_rec_event_status = misty.RegisterEvent("face_rec", Events.FaceRecognition, callback_function = face_rec_callback, debounce = 1500, keep_alive = True)
     #misty.RegisterEvent("status", Events.SelfState, callback_function = look_side_to_side, debounce = 2000, keep_alive = True)
 
     while True:
@@ -110,6 +113,20 @@ def set_head_pitch_callback(data):
 
 def key_phrase_callback(data):
     print(f"Misty heard you, trying to wake her up. Confidence: {data['message']['confidence']}%")
+    misty.RegisterEvent("voice_cap", Events.VoiceRecord, callback_function = voice_rec_callback, keep_alive = True)
+
+def voice_rec_callback(data):
+    if data["message"]["success"] == True:
+        encoded_string = misty.GetAudioFile("capture_HeyMisty.wav", True).json()["result"]["base64"]
+        misty.DeleteAudio("capture_HeyMisty.wav")
+        wav_file = open("out.wav", "wb")
+        wav_file.write(base64.b64decode(encoded_string))
+        print("recording finished")
+        # valami függvény ami feldolgozza a hangot + válaszol
+        misty.Speak("Hello") # placeholder válasz
+        #misty.CaptureSpeech(silenceTimeout = 10000, requireKeyPhrase = False)
+        misty.StartKeyPhraseRecognition()
+
 
 
 def face_rec_callback(data):
@@ -119,7 +136,7 @@ def face_rec_callback(data):
 
     if searching_for_face:
         searching_for_face = False
-        misty.ChangeLED(0, 255, 0);
+        #misty.ChangeLED(0, 255, 0);
         misty.DisplayImage("e_Love.jpg")
         misty.StartKeyPhraseRecognition()
         register_key_phrase_rec()
@@ -148,7 +165,7 @@ def face_rec_callback(data):
 def look_side_to_side():
     print("looking for face...")
     global misty
-    misty.ChangeLED(0, 0, 255)
+    #misty.ChangeLED(0, 0, 255)
     misty.DisplayImage("e_DefaultContent.jpg")
 
     if head_yaw > 0:
@@ -160,7 +177,6 @@ def get_random_int(min, max):
     return random.randint(min, max)
 
 
-
 if __name__ == "__main__":
     try:
         ip_address = "10.2.8.5"
@@ -169,15 +185,15 @@ if __name__ == "__main__":
         #misty.Speak("Hello")
         start_face_following_skill()
 
-
-
     except Exception as ex:
         print(ex)
 
     finally:
         misty.StopFaceRecognition()
         misty.UnregisterAllEvents()
-        misty.ChangeLED(0, 0, 255)
+        misty.ChangeLED(255, 255, 255)
         misty.DisplayImage("e_DefaultContent.jpg")
         misty.StopKeyPhraseRecognition()
+        misty.StopRecordingAudio()
+        misty.StopAvStreaming()
         print("face rec stopped, unregstered all events")
