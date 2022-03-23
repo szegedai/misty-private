@@ -21,20 +21,14 @@ def start():
     #if (_params.turn_off_hazards) misty.UpdateHazardSettings(false, false, false, null, null, false, 0)
 
     #Setting some global variables as normal var <variable_name> cannot be accessed in event callbacks
-    #misty.Set("headYaw", 0.0)
-    #misty.Set("robotYaw", 0.0)
     head_yaw = 0.0
     robot_yaw = 0.0
 
     #Used for smoothening data - barely helps :D - Gotta do more layers for better softening
-    #misty.Set("1b", 0.0)
-    #misty.Set("2b",0.0)
     _1b = 0.0
     _2b = 0.0
 
-    #misty.Set("inProgress", False)
     in_progress = False
-
 
     registerAudioLocalisation()
     registerIMU()
@@ -48,7 +42,7 @@ def registerIMU():
 
 def registerActuatorPosition():
     global misty
-    misty.RegisterEvent("positions", Events.ActuatorPosition, callback_function = positions_callback, debounce = 100 , keep_alive = True)
+    misty.RegisterEvent("positions", Events.ActuatorPosition, condition = [EventFilters.ActuatorPosition.HeadYaw], callback_function = positions_callback, debounce = 100 , keep_alive = True)
 
 def registerAudioLocalisation():
     global misty
@@ -57,11 +51,10 @@ def registerAudioLocalisation():
 
 def positions_callback(data):
     global head_yaw
-    if data["message"]["sensorId"] == "ahy":
-    	head_yaw_local = data["message"]["value"]
-    	head_yaw_local = -45.0 if head_yaw_local < -45.0 else head_yaw_local
-    	head_yaw_local = 45.0 if head_yaw_local > 45.0 else head_yaw_local
-    	head_yaw = head_yaw_local
+    head_yaw_local = data["message"]["value"]
+    head_yaw_local = -45.0 if head_yaw_local < -45.0 else head_yaw_local
+    head_yaw_local = 45.0 if head_yaw_local > 45.0 else head_yaw_local
+    head_yaw = head_yaw_local
 
 def heading_callback(data):
     global robot_yaw

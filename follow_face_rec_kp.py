@@ -19,7 +19,6 @@ misty = None
 first_contact = None
 responded = False
 
-
 def start_face_following_skill(calibration = False):
     global searching_for_face, head_yaw, head_pitch, yaw_right, yaw_left, pitch_up, pitch_down, misty
     face_rec_event_status = None
@@ -44,7 +43,6 @@ def start_face_following_skill(calibration = False):
         yaw_left = 80.21409131831524
         pitch_down = 26.35605857601787
         pitch_up = -33.231552117587746
-
 
     misty.StopFaceRecognition()
     misty.StartFaceRecognition()
@@ -102,8 +100,8 @@ def start_listening():
 def keep_listening():
     global first_contact
     first_contact = False
-    misty.misty.RegisterEvent("voice_cap", Events.VoiceRecord, callback_function = voice_rec_callback, debounce = 10, keep_alive = False)
-    misty.CaptureSpeech(requireKeyPhrase = False)
+    misty.RegisterEvent("voice_cap", Events.VoiceRecord, callback_function = voice_rec_callback, debounce = 10, keep_alive = False)
+    misty.CaptureSpeech(silenceTimeout = 10000, requireKeyPhrase = False)
     print("Misty is listening to speech ('Hey Misty!' is not required)")
 
 def set_head_yaw_callback(data):
@@ -118,14 +116,15 @@ def set_head_pitch_callback(data):
 
 def key_phrase_callback(data):
     print(f"Misty heard you, trying to wake her up. Confidence: {data['message']['confidence']}%")
+    #misty.Speak("Hello")
 
 def respond():
     # TODO: feldolgozni a beérkezett beszédet, választ küldeni
-    misty.Speak("Hello")
+    misty.Speak("OK")
 
 def voice_rec_callback(data):
     global responded
-    if data["message"]["success"] == True:
+    if data["message"]["success"]:
         if first_contact is True:
             encoded_string = misty.GetAudioFile("capture_HeyMisty.wav", True).json()["result"]["base64"]
         else:
@@ -139,6 +138,9 @@ def voice_rec_callback(data):
         # valami függvény ami feldolgozza a hangot + válaszol
         respond() # placeholder válasz
         #misty.StartKeyPhraseRecognition()
+        responded = True
+    else:
+        print("Unsuccessful voice recording")
         responded = True
 
 def face_rec_callback(data):
@@ -155,7 +157,7 @@ def face_rec_callback(data):
     if responded and not searching_for_face:
         responded = False
         start_listening()
-
+        #keep_listening()
 
     bearing = data["message"]["bearing"]
     elevation = data["message"]["elevation"]
@@ -176,13 +178,13 @@ def face_rec_callback(data):
     else:
         misty.MoveHead(local_head_pitch + ((local_pitch_down - local_pitch_up) / 33) * elevation, 0, None, None, 5 / abs(elevation))
 
-
 def look_side_to_side():
     print("looking for face...")
-    global misty
+    global misty, responded
     misty.DisplayImage("e_DefaultContent.jpg")
     misty.StopKeyPhraseRecognition()
     misty.ChangeLED(255, 255, 255)
+    responded = False
 
     if head_yaw > 0:
         misty.MoveHead(get_random_int(-20, 0), 0, -40, None, 4)
@@ -191,7 +193,6 @@ def look_side_to_side():
 
 def get_random_int(min, max):
     return random.randint(min, max)
-
 
 if __name__ == "__main__":
     try:
