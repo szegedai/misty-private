@@ -18,6 +18,7 @@ pitch_down = None
 misty = None
 first_contact = None
 responded = False
+skill_running = True
 
 def start_face_following_skill(calibration = False):
     global searching_for_face, head_yaw, head_pitch, yaw_right, yaw_left, pitch_up, pitch_down, misty
@@ -49,7 +50,7 @@ def start_face_following_skill(calibration = False):
 
     face_rec_event_status = misty.RegisterEvent("face_rec", Events.FaceRecognition, callback_function = face_rec_callback, debounce = 1300, keep_alive = True)
 
-    while True:
+    while skill_running:
         if not "status" in face_rec_event_status.data:
             time_of_last_face_detection = face_rec_event_status.data["message"]["created"]
             date_time_of_last_face_detection = dateutil.parser.isoparse(time_of_last_face_detection)
@@ -58,6 +59,11 @@ def start_face_following_skill(calibration = False):
             seconds_since_last_detection = (now - date_time_of_last_face_detection).total_seconds()
         if seconds_since_last_detection >= 4 or searching_for_face:
             searching_for_face = True
+            if "voice_cap" in misty.active_event_registrations:
+                misty.UnregisterEvent("voice_cap")
+            if "key_phrase_recognized" in misty.active_event_registrations:
+                misty.UnregisterEvent("key_phrase_recognized")
+            misty.StopKeyPhraseRecognition()
             look_side_to_side()
             time.sleep(6.5)
 
@@ -121,9 +127,11 @@ def key_phrase_callback(data):
 def respond():
     # TODO: feldolgozni a beérkezett beszédet, választ küldeni
     misty.Speak("OK")
+    print("misty responded")
 
 def voice_rec_callback(data):
     global responded
+    print("voice_rec_callback elindult")
     if data["message"]["success"]:
         if first_contact is True:
             encoded_string = misty.GetAudioFile("capture_HeyMisty.wav", True).json()["result"]["base64"]
@@ -133,15 +141,27 @@ def voice_rec_callback(data):
         misty.DeleteAudio("capture_Dialogue.wav")
         wav_file = open("out.wav", "wb")
         wav_file.write(base64.b64decode(encoded_string))
-        stt.speech_to_text("out.wav")
+        print("speech to text starts")
+        txt = stt.speech_to_text("out.wav")
+        print(f"{txt}")
         print("recording finished")
         # valami függvény ami feldolgozza a hangot + válaszol
-        respond() # placeholder válasz
+        if txt != "":
+            respond() # placeholder válasz
+        else:
+            misty.Speak("Sorry, I didn't catch that.")
         #misty.StartKeyPhraseRecognition()
         responded = True
     else:
         print("Unsuccessful voice recording")
         responded = True
+    print("unregistering...")
+    if "voice_cap" in misty.active_event_registrations:
+        misty.UnregisterEvent("voice_cap")
+    if "key_phrase_recognized" in misty.active_event_registrations:
+        misty.UnregisterEvent("key_phrase_recognized")
+    print("unregistering finished")
+    misty.StopKeyPhraseRecognition()
 
 def face_rec_callback(data):
     global searching_for_face, misty, responded
@@ -193,6 +213,19 @@ def look_side_to_side():
 
 def get_random_int(min, max):
     return random.randint(min, max)
+
+def stop_skill():
+    global skill_running
+    skill_running = False
+    misty.UnregisterAllEvents()
+    misty.StopRecordingAudio()
+    misty.StopFaceRecognition()
+    misty.StopKeyPhraseRecognition()
+    misty.ChangeLED(255, 255, 255)
+    misty.MoveHead(-15.0, 0.0, 0.0, None, 1)
+    misty.DisplayImage("e_DefaultContent.jpg")
+
+
 
 if __name__ == "__main__":
     try:

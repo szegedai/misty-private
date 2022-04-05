@@ -11,8 +11,12 @@ def speech_to_text(filename):
             # recognize (convert from speech to text)
             text = r.recognize_google(audio_data, language="hu")
             print(text)
-            f = open("stt.txt", "w")
-            f.write(text)
-            f.close()
+            with open("stt.txt", "w") as f:
+                f.write(text)
+            return text
     except IOError:
         print("Error: File does not appear to exist.")
+        return ""
+    except sr.UnknownValueError:
+        print("Error: unknown values in wav file.")
+        return ""
