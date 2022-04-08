@@ -12,6 +12,7 @@ def captouch_callback(data):
 
 def start_sample_skill(misty):
     global sample_skill_running
+    misty.Speak("Sample skill started.")
     print("sample skill started")
     sample_skill_running = True
     misty.ChangeLED(0,255,0)

@@ -71,15 +71,19 @@ def init_variables_and_events():
     face_rec_event_status = misty.RegisterEvent("face_rec", Events.FaceRecognition, callback_function = face_rec_callback, debounce = 1300, keep_alive = True)
     misty.RegisterEvent("set_head_yaw", Events.ActuatorPosition, condition = [EventFilters.ActuatorPosition.HeadYaw], callback_function = set_head_yaw_callback, debounce = 100, keep_alive = True)
     misty.RegisterEvent("set_head_pitch", Events.ActuatorPosition, condition = [EventFilters.ActuatorPosition.HeadPitch], callback_function = set_head_pitch_callback, debounce = 100, keep_alive = True)
-    misty.RegisterEvent("heading", Events.IMU, callback_function = heading_callback, debounce = 100, keep_alive = True)
+    misty.RegisterEvent("heading", Events.IMU, callback_function = heading_callback, debounce = 10, keep_alive = True)
     misty.RegisterEvent("sound", Events.SourceTrackDataMessage, callback_function = sound_callback, debounce = 100, keep_alive = True)
     misty.RegisterEvent("key_phrase_turn", Events.KeyPhraseRecognized, callback_function = key_phrase_turn_callback, debounce = 10, keep_alive = False)
-    #misty.RegisterEvent("bump_sensor_pressed", Events.BumpSensor, callback_function = bump_callback, debounce = 10, keep_alive = True)
+    misty.RegisterEvent("bump_sensor_pressed", Events.BumpSensor, callback_function = bump_callback, debounce = 10, keep_alive = True)
     misty.StartKeyPhraseRecognition(captureSpeech = False)
 
 
 def bump_callback(data):
-    respond()
+    global skill_finished
+    stop_idle_skill()
+    time.sleep(1)
+    #skill_finished = robot_main.start_robot_connection("10.2.8.5")
+    skill_finished = sample_skill.start_sample_skill(misty)
 
 def start_idle_skill(calibration = False):
     global searching_for_face, head_yaw, head_pitch, yaw_right, yaw_left, pitch_up, pitch_down, misty, looked_at, robot_yaw, turn_in_progress, _1b, _2b, vector, head_yaw_for_turning, face_rec_event_status
@@ -208,6 +212,7 @@ def key_phrase_turn_callback(data):
         vector = 0.4 * to_robot_frame(degree_of_arrival_speech) + 0.35 * _1b + 0.25 * _2b
         #if seconds_past(looked_at) > 5.0 and searching_for_face:
         print("Misty hallott, fordul a hang felé...")
+        print(f"vector: {vector}")
         #turn_in_progress = True
         #print(f"{vector} <-- Look At Input Global")
         look_at(vector, robot_yaw, head_yaw_for_turning)
@@ -240,45 +245,26 @@ def look_at(heading, robot_yaw_at_start, head_yaw_at_start):
     look_at_start_time = datetime.now(timezone.utc)
     global turn_in_progress, looked_at, misty
     misty.UnregisterEvent("face_rec")
-    #turn_in_progress = True
 
-    """head motion
-    raw_final_head_pose = head_yaw_for_turning + heading
-    actuate_to = raw_final_head_pose
-    actuate_to = -45.0 if actuate_to <- 45.0 else actuate_to
-    actuate_to = 45.0 if actuate_to > 45 else actuate_to
-    #print(f"{actuate_to} <- Head to move to")
-    misty.MoveHead(-15.0, 0.5, actuate_to, None, 1)"""
-
-    #body motion
-        #misty.PauseSkill(1000)
     global_heading = offset_heading(heading + (head_yaw_at_start * 2.0))
+
     if global_heading > 180: global_heading-=360
     misty.Drive(0, 30) if angle_difference(robot_yaw_at_start, global_heading) >= 0 else misty.Drive(0, -30)
     #print(f"{global_heading} <- Body to move to")
     initial_error = abs(angle_difference(robot_yaw_at_start, global_heading))
     current_abs_error = initial_error
-    #head_reset_done = False
-    while (abs(robot_yaw - global_heading) >= 10):
-        current_abs_error = abs(angle_difference(robot_yaw, global_heading))
-        #print("turning...")
-        #if current_abs_error / initial_error < 0.45 and not head_reset_done:
-        #    head_reset_done = True
-        #    misty.MoveHead(-15.0, 0.0, 0.0, None, 2.5)
+    #print(f"global_heading: {global_heading}")
+    #print(f"robot_yaw: {robot_yaw}")
+    while (abs(robot_yaw - global_heading) >= 3):
+        #print(f"robot_yaw - global_heading = {robot_yaw} - {global_heading} = {robot_yaw - global_heading}")
         if (datetime.now(timezone.utc) - look_at_start_time).total_seconds() > 10:
             print("something went wrong during turning")
             break
-        #misty.PauseSkill(10)
     misty.Stop()
-    #else:
-        #misty.PauseSkill(3000)
 
     looked_at = datetime.now(timezone.utc)
-    #turn_in_progress = False
-    #misty.StopRecordingAudio()
     face_rec_event_status = misty.RegisterEvent("face_rec", Events.FaceRecognition, callback_function = face_rec_callback, debounce = 1300, keep_alive = True)
     print("look_at DONE")
-    #misty.StopKeyPhraseRecognition()
 
 def start_listening():
     global first_contact
@@ -372,19 +358,12 @@ def face_rec_callback(data):
     #print(f"bearing: {bearing}")
     #print(f"elevation: {elevation}")
 
-    local_head_yaw = head_yaw
-    local_head_pitch = head_pitch
-    local_yaw_right = yaw_right
-    local_yaw_left = yaw_left
-    local_pitch_up = pitch_up
-    local_pitch_down = pitch_down
-
     if bearing != 0 and elevation != 0:
-        misty.MoveHead(local_head_pitch + ((local_pitch_down - local_pitch_up) / 33) * elevation, 0, local_head_yaw + ((local_yaw_left - local_yaw_right) / 66) * bearing, None, 7 / abs(bearing))
+        misty.MoveHead(head_pitch + ((pitch_down - pitch_up) / 33) * elevation, 0, head_yaw + ((yaw_left - yaw_right) / 66) * bearing, None, 7 / abs(bearing))
     elif bearing != 0:
-        misty.MoveHead(None, 0, local_head_yaw + ((local_yaw_left - local_yaw_right) / 66) * bearing, None, 7 / abs(bearing))
+        misty.MoveHead(None, 0, head_yaw + ((yaw_left - yaw_right) / 66) * bearing, None, 7 / abs(bearing))
     else:
-        misty.MoveHead(local_head_pitch + ((local_pitch_down - local_pitch_up) / 33) * elevation, 0, None, None, 5 / abs(elevation))
+        misty.MoveHead(head_pitch + ((pitch_down - pitch_up) / 33) * elevation, 0, None, None, 5 / abs(elevation))
 
 def look_side_to_side():
     print("looking for face...")
@@ -410,7 +389,7 @@ def stop_idle_skill():
     misty.StopKeyPhraseRecognition()
     misty.StopRecordingAudio()
     misty.Halt()
-    print("SKILL_STOPPED")
+    print("IDLE_SKILL_STOPPED")
 
     return
 
@@ -420,14 +399,17 @@ if __name__ == "__main__":
         misty = Robot(ip_address)
         print(ip_address)
         #misty.Speak("Hello")
+
         while True:
             if skill_finished:
+                print("starting idle skill")
                 start_idle_skill()
 
     except Exception as ex:
         print(ex)
 
     finally:
+        misty.StopAvStreaming()
         misty.StopFaceRecognition()
         misty.UnregisterAllEvents()
         misty.ChangeLED(0, 0, 0)
