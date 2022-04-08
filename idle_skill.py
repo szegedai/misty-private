@@ -11,6 +11,7 @@ import numpy as np
 from statistics import mean
 import operator
 import sample_skill
+import robot_main
 
 searching_for_face = None
 head_yaw = None
@@ -65,6 +66,7 @@ def init_variables_and_events():
     looked_at = datetime.now(timezone.utc)
 
     #misty.StartRecordingAudio("deleteThis.wav")
+    misty.EnableCameraService()
     misty.StopFaceRecognition()
     misty.StartFaceRecognition()
 
