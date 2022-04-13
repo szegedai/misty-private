@@ -11,7 +11,8 @@ import numpy as np
 from statistics import mean
 import operator
 import sample_skill
-import robot_main
+import rps
+import sys
 
 searching_for_face = None
 head_yaw = None
@@ -77,49 +78,75 @@ def init_variables_and_events():
     misty.RegisterEvent("sound", Events.SourceTrackDataMessage, callback_function = sound_callback, debounce = 100, keep_alive = True)
     misty.RegisterEvent("key_phrase_turn", Events.KeyPhraseRecognized, callback_function = key_phrase_turn_callback, debounce = 10, keep_alive = False)
     misty.RegisterEvent("bump_sensor_pressed", Events.BumpSensor, callback_function = bump_callback, debounce = 10, keep_alive = True)
+    misty.RegisterEvent("captouch", Events.TouchSensor, callback_function = captouch_callback, debounce = 100, keep_alive = True)
     misty.StartKeyPhraseRecognition(captureSpeech = False)
 
 
-def bump_callback(data):
-    global skill_finished
+def captouch_callback(data):
+    print("Restarting skill...")
     stop_idle_skill()
     time.sleep(1)
-    #skill_finished = robot_main.start_robot_connection("10.2.8.5")
+    start_idle_skill()
+
+def bump_callback(data):
+    print("bump sensor pressed")
+    start_rps()
+    #start_sample()
+    #skill_finished = sample_skill.start_sample_skill(misty)
+
+def start_rps():
+    global skill_finished
+    if misty is not None:
+        stop_idle_skill()
+        skill_finished = rps.start_robot_connection(misty_ip_address)
+    else:
+        skill_finished = rps.start_robot_connection()
+def start_sample():
+    global skill_finished
+    if misty is not None:
+        stop_idle_skill()
     skill_finished = sample_skill.start_sample_skill(misty)
 
 def start_idle_skill(calibration = False):
     global searching_for_face, head_yaw, head_pitch, yaw_right, yaw_left, pitch_up, pitch_down, misty, looked_at, robot_yaw, turn_in_progress, _1b, _2b, vector, head_yaw_for_turning, face_rec_event_status
-    global time_of_last_face_detection, date_time_of_last_face_detection, seconds_since_last_detection
+    global time_of_last_face_detection, date_time_of_last_face_detection, seconds_since_last_detection, idle_skill
     print("idle_skill STARTED")
-    init_variables_and_events()
+    if misty is not None:
+        init_variables_and_events()
+    else:
+        idle_skill = True
+        skill_finished = False
 
     while idle_skill:
         #print(turn_in_progress
         #print(misty.active_event_registrations)
-        if not "status" in face_rec_event_status.data:
-            time_of_last_face_detection = face_rec_event_status.data["message"]["created"]
-            date_time_of_last_face_detection = dateutil.parser.isoparse(time_of_last_face_detection)
-        now = datetime.now(timezone.utc)
-        if date_time_of_last_face_detection is not None:
-            seconds_since_last_detection = (now - date_time_of_last_face_detection).total_seconds()
-        if (seconds_since_last_detection >= 4 or searching_for_face) and not turn_in_progress:
-            if "key_phrase_recognized" in misty.active_event_registrations:
-                misty.StopKeyPhraseRecognition()
-                time.sleep(1)
-                misty.UnregisterEvent("key_phrase_recognized")
-                print("Face lost...")
-                print("KeyPhraseRecognition stopped (for conversation)")
-            if "voice_cap" in misty.active_event_registrations:
-                misty.UnregisterEvent("voice_cap")
-            if not "key_phrase_turn" in misty.active_event_registrations:
-                print("KeyPhraseRecognition started (for turning)")
-                misty.StartKeyPhraseRecognition(captureSpeech = False)
-                misty.RegisterEvent("key_phrase_turn", Events.KeyPhraseRecognized, callback_function = key_phrase_turn_callback, debounce = 10, keep_alive = False)
-            if not "sound" in misty.active_event_registrations:
-                misty.RegisterEvent("sound", Events.SourceTrackDataMessage, callback_function = sound_callback, debounce = 100, keep_alive = True)
-            searching_for_face = True
-            look_side_to_side()
-            time.sleep(6.5)
+        if misty is not None:
+            if not "status" in face_rec_event_status.data:
+                time_of_last_face_detection = face_rec_event_status.data["message"]["created"]
+                date_time_of_last_face_detection = dateutil.parser.isoparse(time_of_last_face_detection)
+            now = datetime.now(timezone.utc)
+            if date_time_of_last_face_detection is not None:
+                seconds_since_last_detection = (now - date_time_of_last_face_detection).total_seconds()
+            if (seconds_since_last_detection >= 4 or searching_for_face) and not turn_in_progress:
+                if "key_phrase_recognized" in misty.active_event_registrations:
+                    misty.StopKeyPhraseRecognition()
+                    time.sleep(1)
+                    misty.UnregisterEvent("key_phrase_recognized")
+                    print("Face lost...")
+                    print("KeyPhraseRecognition stopped (for conversation)")
+                if "voice_cap" in misty.active_event_registrations:
+                    misty.UnregisterEvent("voice_cap")
+                if not "key_phrase_turn" in misty.active_event_registrations:
+                    print("KeyPhraseRecognition started (for turning)")
+                    misty.StartKeyPhraseRecognition(captureSpeech = False)
+                    misty.RegisterEvent("key_phrase_turn", Events.KeyPhraseRecognized, callback_function = key_phrase_turn_callback, debounce = 10, keep_alive = False)
+                if not "sound" in misty.active_event_registrations:
+                    misty.RegisterEvent("sound", Events.SourceTrackDataMessage, callback_function = sound_callback, debounce = 100, keep_alive = True)
+                searching_for_face = True
+                look_side_to_side()
+                time.sleep(6.5)
+        else:
+            print("NO ROBOT")
             #print(misty.active_event_registrations)
     #misty.KeepAlive()
 
@@ -184,7 +211,7 @@ def key_phrase_turn_callback(data):
     misty.UnregisterEvent("key_phrase_turn")
     misty.StopKeyPhraseRecognition()
     time.sleep(0.5)
-    misty.ChangeLED(0, 255, 0)
+    #misty.ChangeLED(0, 255, 0)
     misty.DisplayImage("e_Surprise.jpg")
 
     time.sleep(2)
@@ -340,7 +367,7 @@ def face_rec_callback(data):
         misty.StopKeyPhraseRecognition()
         misty.UnregisterEvent("key_phrase_turn")
         print("key_phrase_turn unregistered")
-        time.sleep(1)
+        misty.Halt()
     if "sound" in misty.active_event_registrations:
         misty.UnregisterEvent("sound")
         print("sound unregistered")
@@ -350,9 +377,11 @@ def face_rec_callback(data):
         searching_for_face = False
         #misty.ChangeLED(0, 255, 0);
         misty.DisplayImage("e_Love.jpg")
+        time.sleep(1)
         start_listening()
 
     if not "voice_cap" in misty.active_event_registrations and not "key_phrase_recognized" in misty.active_event_registrations and not turn_in_progress:
+        print("first failed")
         start_listening()
 
     bearing = data["message"]["bearing"]
@@ -397,12 +426,11 @@ def stop_idle_skill():
 
 if __name__ == "__main__":
     try:
-        ip_address = "10.2.8.5"
-        misty = Robot(ip_address)
-        print(ip_address)
-        #misty.Speak("Hello")
+        misty_ip_address = "10.2.8.5"
+        misty = Robot(misty_ip_address)
 
         while True:
+            time.sleep(0.1)
             if skill_finished:
                 print("starting idle skill")
                 start_idle_skill()
