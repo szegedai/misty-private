@@ -20,18 +20,11 @@ def start_sample_skill(misty):
     sample_skill_running = True
     if misty is not None:
         #misty.Speak("Sample skill started.")
-
         misty.ChangeLED(0,255,0)
         misty.RegisterEvent("CapTouchSensor", Events.TouchSensor, callback_function = captouch_callback, debounce = 2000, keep_alive = True)
         while sample_skill_running:
             print("sample skill is running")
             #pass
         misty.UnregisterAllEvents()
-    else:
-        try:
-            while sample_skill_running:
-                print("sample skill is running")
-        except KeyboardInterrupt:
-            pass
 
     return True
