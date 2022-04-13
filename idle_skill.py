@@ -96,15 +96,12 @@ def bump_callback(data):
 
 def start_rps():
     global skill_finished
-    if misty is not None:
-        stop_idle_skill()
-        skill_finished = rps.start_robot_connection(misty_ip_address)
-    else:
-        skill_finished = rps.start_robot_connection()
+    stop_idle_skill()
+    skill_finished = rps.start_robot_connection(misty_ip_address)
+
 def start_sample():
     global skill_finished
-    if misty is not None:
-        stop_idle_skill()
+    stop_idle_skill()
     skill_finished = sample_skill.start_sample_skill(misty)
 
 def start_idle_skill(calibration = False):
@@ -114,8 +111,7 @@ def start_idle_skill(calibration = False):
     if misty is not None:
         init_variables_and_events()
     else:
-        idle_skill = True
-        skill_finished = False
+        print("NO ROBOT")
 
     while idle_skill:
         #print(turn_in_progress
@@ -145,8 +141,6 @@ def start_idle_skill(calibration = False):
                 searching_for_face = True
                 look_side_to_side()
                 time.sleep(6.5)
-        else:
-            print("NO ROBOT")
             #print(misty.active_event_registrations)
     #misty.KeepAlive()
 
@@ -211,7 +205,7 @@ def key_phrase_turn_callback(data):
     misty.UnregisterEvent("key_phrase_turn")
     misty.StopKeyPhraseRecognition()
     time.sleep(0.5)
-    #misty.ChangeLED(0, 255, 0)
+    misty.ChangeLED(0, 255, 0)
     misty.DisplayImage("e_Surprise.jpg")
 
     time.sleep(2)
