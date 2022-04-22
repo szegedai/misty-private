@@ -26,6 +26,10 @@ import operator
 import sample_skill
 import rps
 import sys
+import stt_bme
+import asyncio
+import signal
+import tts
 
 searching_for_face = None
 head_yaw = None
@@ -56,7 +60,6 @@ degree_list = []
 def init_variables_and_events():
     global searching_for_face, head_yaw, head_pitch, yaw_right, yaw_left, pitch_up, pitch_down, misty, looked_at, robot_yaw, turn_in_progress, _1b, _2b, vector, head_yaw_for_turning, face_rec_event_status
     global date_time_of_last_face_detection, seconds_since_last_detection, idle_skill, skill_finished
-
     # initializing variables
     idle_skill = True
     # set skill finished False, so the while loop in the main function doesn't keep calling start_idle_skill
@@ -113,7 +116,7 @@ def captouch_callback(data):
 # currently only used for testing purposes
 def bump_callback(data):
     print("bump sensor pressed")
-    start_rps()
+    start_sample()
 
 # this function stops the idle skill and starts the rps skill
 # with the current skill switching implementation, external skills should return with True
@@ -373,26 +376,27 @@ def key_phrase_callback(data):
     #misty.Speak("Hello")
 
 # this function is supposed to make Misty respond appropriately to the user
-# right now it just stops the idle skill and starts the sample skill, no matter what the user says
-def respond(text = ""):
+# right now intent recognition is not implemented
+# if the speech_to_text_result contains "minta" or "mint a" the sample skill starts
+# otherwise misty repeats what she heard
+def respond(speech_to_text_result = ""):
     global testing_skill, skill_finished
+    print(speech_to_text_result)
 
     # TODO: recognise the user's intent and answer or start a skill based on that
 
-    print("OK")
-    if testing_skill:
-        # this is how we can start a different skill e.g when we recognise that the user's intent is to start a skill
-        # we call the stop_idle_skill() function
-        # then we call the skill function that should return with True and we set the skill_finished variable to True
-        # this is needed to easily swap back to the idle skill after the external skill is finished
-        stop_idle_skill()
-        skill_finished = sample_skill.start_sample_skill(misty)
+    if "minta" in speech_to_text_result or "mint a" in speech_to_text_result:
+        start_sample()
+    else:
+        tts.synthesize_text_to_robot(misty, speech_to_text_result, "response.wav")
+        start_idle_skill()
 
 # callback for the voice_cap event
 # this triggers after we woke misty up with "Hey, Misty!" and started (and finished) speaking to her
 # misty captures speech and saves it to the "capture_HeyMisty.wav" file on the Robot
 # then we can access this file, send it to STT and call the respond() function
 def voice_rec_callback(data):
+    speech_to_text_result = ""
     print("voice_rec_callback START")
     if data["message"]["success"]:
         # accessing the wav file
@@ -402,17 +406,23 @@ def voice_rec_callback(data):
         wav_file = open("out.wav", "wb")
         wav_file.write(base64.b64decode(encoded_string))
 
-        # TODO:
-        # implementing the BME stt, sending the wav file and reciving the text
-        # so we can call the respond function with the text as input
-        # below there's a simple (commented out) solution that doesn't use the BME stt but it doesn't work well
+        # we send the wav file to the BME stt
+        try:
+            if asyncio.run(stt_api.ws_check_connection()):
+                # while we wait for the result, we stop the idle skill and change the led to red to indicate that stuff is happining in the background
+                stop_idle_skill()
+                misty.DisplayImage("e_Surprise.jpg")
+                misty.ChangeLED(255, 0, 0)
+                res = asyncio.run(stt_api.ws_wav_recognition("out.wav"))
+                print("Result: ", res.split(";")[1])
+                speech_to_text_result = res.split(";")[1]
+            else:
+                print("Unable to establish connection to the ASR server!")
+        except Exception as e:
+            print("ERROR")
+            print(e)
 
-        #print("speech to text starts")
-        #txt = stt.speech_to_text("out.wav")
-        #print(f"{txt}")
-        #print("recording finished")
-        #if txt != "":
-        respond()
+        respond(speech_to_text_result)
         #else:
         #    misty.Speak("Sorry, I didn't catch that.")
         #misty.StartKeyPhraseRecognition()
@@ -517,6 +527,7 @@ if __name__ == "__main__":
     try:
         misty_ip_address = "10.2.8.5"
         misty = Robot(misty_ip_address)
+        stt_api = stt_bme.SpeechToTextAPI("wss://chatbot-rgai3.inf.u-szeged.hu/socket")
 
         # this loop keeps the program alive
         # if skill_finished is True, we start the idle skill (which sets the skill_finished variable to false)
