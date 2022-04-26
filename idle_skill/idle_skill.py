@@ -126,7 +126,7 @@ def captouch_callback(data):
 # currently only used for testing purposes
 def bump_callback(data):
     global skill_to_start
-    start_external_skill("sample")
+    start_external_skill("rps")
 
 # this function stops the idle skill and sets the start_external variable to True
 # we call this function when we want to start an external skill from the main loop
@@ -142,7 +142,7 @@ def start_external_skill(skill = ""):
 # this function starts the idle skill
 def start_idle_skill(calibration = False):
     global searching_for_face, head_yaw, head_pitch, yaw_right, yaw_left, pitch_up, pitch_down, misty, looked_at, robot_yaw, turn_in_progress, _1b, _2b, vector, head_yaw_for_turning, face_rec_event_status
-    global date_time_of_last_face_detection, seconds_since_last_detection, idle_skill
+    global date_time_of_last_face_detection, seconds_since_last_detection, idle_skill, waiting_for_response
     print("idle_skill STARTED")
 
     # this is the main loop of the skill
@@ -157,7 +157,7 @@ def start_idle_skill(calibration = False):
                 seconds_since_last_detection = (datetime.now(timezone.utc) - date_time_of_last_face_detection).total_seconds()
             # if the last face detection was more than 4 seconds ago, and turning is not in progress
             # then we unregister events for conversation and register events for turning
-            if (seconds_since_last_detection >= 4 or searching_for_face) and not turn_in_progress:
+            if (seconds_since_last_detection >= 4 or searching_for_face) and not turn_in_progress and not waiting_for_response:
                 # if the key_phrase_recognized event is still registered, we stop the KeyPhraseRecognition and unregister the event
                 # this is needed, because we need the key_phrase_turn event, and it also uses KeyPhraseRecognition so it conflicts with key_phrase_recognized
                 if "key_phrase_recognized" in misty.active_event_registrations:
@@ -384,13 +384,15 @@ def respond(speech_to_text_result = ""):
     print(speech_to_text_result)
 
     # TODO: recognise the user's intent and answer or start a skill based on that
+    # e.g.
+    # if intent == "play rock paper scissors":
+    #   start_external_skill("rps")
 
     if "minta" in speech_to_text_result or "mint a" in speech_to_text_result:
         start_external_skill("sample")
     else:
         tts.synthesize_text_to_robot(misty, speech_to_text_result, "response.wav")
-        #init_variables_and_events()
-        #start_idle_skill()
+
     waiting_for_response = False
 
 # callback for the voice_cap event
@@ -525,7 +527,10 @@ def stop_idle_skill():
 
 if __name__ == "__main__":
     try:
-        misty_ip_address = "10.2.8.5"
+        if(len(sys.argv) > 1):
+            misty_ip_address = sys.argv[1]
+        else:
+            misty_ip_address = "10.2.8.5"
         misty = Robot(misty_ip_address)
         stt_api = stt_bme.SpeechToTextAPI("wss://chatbot-rgai3.inf.u-szeged.hu/socket")
 
