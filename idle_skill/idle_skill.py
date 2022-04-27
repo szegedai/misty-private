@@ -30,6 +30,7 @@ import stt_bme
 import asyncio
 import signal
 import tts
+import placeholder_rps, placeholder_emotion, placeholder_recognizer
 
 searching_for_face = None
 head_yaw = None
@@ -49,6 +50,7 @@ restart_skill = False
 start_external = False
 skill_to_start = ""
 waiting_for_response = False
+first_contact = True
 
 # move to sound változók
 turn_in_progress = False
@@ -114,8 +116,9 @@ def init_variables_and_events():
 # callback for the captouch event
 # we use this to restart the idle skill if something goes wrong
 def captouch_callback(data):
-    global restart_skill
+    global restart_skill, first_contact
     restart_skill = True
+    first_contact = True
     print("Restarting skill...")
     stop_idle_skill()
     time.sleep(1)
@@ -390,8 +393,16 @@ def respond(speech_to_text_result = ""):
 
     if "minta" in speech_to_text_result or "mint a" in speech_to_text_result:
         start_external_skill("sample")
+    elif "papír" in speech_to_text_result:
+        start_external_skill("ph_rps")
+    elif "érzelem" or "érzel" in speech_to_text_result:
+        start_external_skill("ph_emotion")
+    elif "felismerő" or "ismer" in speech_to_text_result:
+        start_external_skill("ph_recognizer")
     else:
-        tts.synthesize_text_to_robot(misty, speech_to_text_result, "response.wav")
+        print("Nem értette")
+        tts.synthesize_text_to_robot(misty, f"Azt hallottam, hogy: {speech_to_text_result}", "response.wav")
+        #tts.synthesize_text_to_robot(misty, "Nem értettem, kérlek mondd máshogy!", "response.wav")
 
     waiting_for_response = False
 
@@ -414,7 +425,7 @@ def voice_rec_callback(data):
         # we send the wav file to the BME stt
         try:
             if asyncio.run(stt_api.ws_check_connection()):
-                # while we wait for the result, we change the led to green to indicate that stuff is happining in the background
+                # while we wait for the result, we change the led to green to indicate that stuff is happening in the background
                 waiting_for_response = True
                 misty.ChangeLED(0, 255, 0)
                 res = asyncio.run(stt_api.ws_wav_recognition("out.wav"))
@@ -447,10 +458,15 @@ def voice_rec_callback(data):
 # and we register events for conversation (so we can have a conversation or start a skill with speech)
 # we also try to follow the recognised face
 def face_rec_callback(data):
-    global searching_for_face, misty, turn_in_progress
+    global searching_for_face, misty, turn_in_progress, first_contact
 
     print("face found!")
     #print(data["message"]["label"])
+
+    if first_contact:
+        #tts.synthesize_text_to_robot(misty, "Hello Én miszti robot vagyok! Örülök, hogy itt vagy! 3 szuper játékot tudsz velem játszani. Kő papír olló, felismerő robot és érzelem robot. Melyikkel szeretnél játszani? A héj miszti paranccsal tudsz megszólítani, majd a pittyenés után beszélhetsz.", "response.wav")
+        first_contact = False
+
 
     # unregistering events used for turning
     if "key_phrase_turn" in misty.active_event_registrations:
@@ -549,16 +565,23 @@ if __name__ == "__main__":
                 print("restarting idle skill")
                 init_variables_and_events()
                 start_idle_skill()
+
             # if start_external is True, we check the skill_to_start variable's value and start a skill based on that
             if start_external:
                 if skill_to_start == "sample":
                     skill_finished = sample_skill.start_sample_skill(misty)
                 if skill_to_start == "rps":
                     skill_finished = rps.start_robot_connection(misty_ip_address)
+                if skill_to_start == "ph_rps":
+                    skill_finished = placeholder_rps.start_skill(misty)
+                if skill_to_start == "ph_emotion":
+                    skill_finished = placeholder_emotion.start_skill(misty)
+                if skill_to_start == "ph_recognizer":
+                    skill_finished = placeholder_recognizer.start_skill(misty)
+
                 else:
                     print("skill not found restarting idle_skill")
                     restart_skill = True
-
 
     except Exception as ex:
         print(ex)
