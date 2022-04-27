@@ -391,13 +391,13 @@ def respond(speech_to_text_result = ""):
     # if intent == "play rock paper scissors":
     #   start_external_skill("rps")
 
-    if "minta" in speech_to_text_result or "mint a" in speech_to_text_result:
+    if "minta" in speech_to_text_result in speech_to_text_result or "mint a" in speech_to_text_result:
         start_external_skill("sample")
     elif "papír" in speech_to_text_result:
         start_external_skill("ph_rps")
-    elif "érzelem" or "érzel" in speech_to_text_result:
+    elif "érzelem" in speech_to_text_result or "érzel" in speech_to_text_result:
         start_external_skill("ph_emotion")
-    elif "felismerő" or "ismer" in speech_to_text_result:
+    elif "felismerő" in speech_to_text_result or "ismer" in speech_to_text_result:
         start_external_skill("ph_recognizer")
     else:
         print("Nem értette")
@@ -464,7 +464,7 @@ def face_rec_callback(data):
     #print(data["message"]["label"])
 
     if first_contact:
-        #tts.synthesize_text_to_robot(misty, "Hello Én miszti robot vagyok! Örülök, hogy itt vagy! 3 szuper játékot tudsz velem játszani. Kő papír olló, felismerő robot és érzelem robot. Melyikkel szeretnél játszani? A héj miszti paranccsal tudsz megszólítani, majd a pittyenés után beszélhetsz.", "response.wav")
+        tts.synthesize_text_to_robot(misty, "Hello Én miszti robot vagyok! Örülök, hogy itt vagy! 3 szuper játékot tudsz velem játszani. Kő papír olló, felismerő robot és érzelem robot. Melyikkel szeretnél játszani? A héj miszti paranccsal tudsz megszólítani, majd a pittyenés után beszélhetsz.", "response.wav")
         first_contact = False
 
 
@@ -570,13 +570,13 @@ if __name__ == "__main__":
             if start_external:
                 if skill_to_start == "sample":
                     skill_finished = sample_skill.start_sample_skill(misty)
-                if skill_to_start == "rps":
+                elif skill_to_start == "rps":
                     skill_finished = rps.start_robot_connection(misty_ip_address)
-                if skill_to_start == "ph_rps":
+                elif skill_to_start == "ph_rps":
                     skill_finished = placeholder_rps.start_skill(misty)
-                if skill_to_start == "ph_emotion":
+                elif skill_to_start == "ph_emotion":
                     skill_finished = placeholder_emotion.start_skill(misty)
-                if skill_to_start == "ph_recognizer":
+                elif skill_to_start == "ph_recognizer":
                     skill_finished = placeholder_recognizer.start_skill(misty)
 
                 else:
