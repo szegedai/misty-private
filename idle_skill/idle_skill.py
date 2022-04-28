@@ -259,7 +259,7 @@ def key_phrase_turn_callback(data):
     time.sleep(0.5)
     # we set the LED to green to indicate that misty is listening
     misty.ChangeLED(0, 255, 0)
-    misty.DisplayImage("e_Surprise.jpg")
+    misty.DisplayImage("e_Thinking.jpg")
     # we wait a few seconds, continuous speech is required for misty to accurately pick up voice activity
     time.sleep(2)
     misty.ChangeLED(0, 0, 0)
@@ -405,6 +405,7 @@ def respond(speech_to_text_result = ""):
         #tts.synthesize_text_to_robot(misty, "Nem értettem, kérlek mondd máshogy!", "response.wav")
 
     waiting_for_response = False
+    misty.DisplayImage("e_Love.jpg")
 
 # callback for the voice_cap event
 # this triggers after we woke misty up with "Hey, Misty!" and started (and finished) speaking to her
@@ -428,6 +429,7 @@ def voice_rec_callback(data):
                 # while we wait for the result, we change the led to green to indicate that stuff is happening in the background
                 waiting_for_response = True
                 misty.ChangeLED(0, 255, 0)
+                misty.DisplayImage("e_Thinking4.jpg")
                 res = asyncio.run(stt_api.ws_wav_recognition("out.wav"))
                 print("Result: ", res.split(";")[1])
                 speech_to_text_result = res.split(";")[1]
@@ -516,8 +518,10 @@ def look_side_to_side():
 
     if head_yaw > 0 and not turn_in_progress:
         misty.MoveHead(get_random_int(-20, 0), 0, -40, None, 4)
+        misty.DisplayImage("e_Thinking.jpg")
     elif head_yaw <= 0 and not turn_in_progress:
         misty.MoveHead(get_random_int(-20, 0), 0, 40, None, 4)
+        misty.DisplayImage("e_Thinking2.jpg")
 
 # utility function to generate random number between min and max
 def get_random_int(min, max):
@@ -557,14 +561,11 @@ if __name__ == "__main__":
         while True:
             time.sleep(0.1)
             print("main cycle")
-            if skill_finished:
+            if skill_finished or restart_skill:
                 print("starting idle skill")
                 init_variables_and_events()
                 start_idle_skill()
-            if restart_skill:
-                print("restarting idle skill")
-                init_variables_and_events()
-                start_idle_skill()
+
 
             # if start_external is True, we check the skill_to_start variable's value and start a skill based on that
             if start_external:
