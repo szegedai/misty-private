@@ -390,7 +390,7 @@ def respond(speech_to_text_result = ""):
     # e.g.
     # if intent == "play rock paper scissors":
     #   start_external_skill("rps")
-
+    misty.DisplayImage("e_Love.jpg")
     if "minta" in speech_to_text_result in speech_to_text_result or "mint a" in speech_to_text_result:
         start_external_skill("sample")
     elif "papír" in speech_to_text_result:
@@ -405,7 +405,7 @@ def respond(speech_to_text_result = ""):
         #tts.synthesize_text_to_robot(misty, "Nem értettem, kérlek mondd máshogy!", "response.wav")
 
     waiting_for_response = False
-    misty.DisplayImage("e_Love.jpg")
+
 
 # callback for the voice_cap event
 # this triggers after we woke misty up with "Hey, Misty!" and started (and finished) speaking to her
